@@ -14,7 +14,7 @@ import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } from '@
 // TODO: Set STRIPE_SECRET_KEY environment variable
 // Test key format: sk_test_...
 // Live key format: sk_live_...
-var stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_PLACEHOLDER')
+var stripe = new Stripe(process.env.STRIPE_KEY)
 
 var ses = new SESClient({ region: 'us-east-1' })
 var dynamoDb = new DynamoDBClient({ region: 'us-east-1' })
@@ -74,6 +74,11 @@ export async function handler (event) {
 
     if (!application.Item) {
       return respond(404, {error: 'Application not found. Please apply first.'})
+    }
+
+    // Check if already paid (prevent double charging)
+    if (application.Item.paymentStatus === 'paid') {
+      return respond(400, {error: 'Payment already completed for this application. Contact support@innovationbound.com if you need assistance.'})
     }
 
     // Parse and validate tier
@@ -227,7 +232,7 @@ async function processCreditCardPayment (data) {
     await db.send(new PutCommand({
       TableName: "www.innovationbound.com",
       Item: {
-        pk: "student#2026-ai-accelerator",
+        pk: "student#ai-accelerator",
         sk: applicant,
         name: name,
         email: applicant,
@@ -326,7 +331,7 @@ async function processInvoiceRequest (data) {
     await db.send(new PutCommand({
       TableName: "www.innovationbound.com",
       Item: {
-        pk: "student#2026-ai-accelerator",
+        pk: "student#ai-accelerator",
         sk: applicant,
         name: name,
         email: applicant,
@@ -464,7 +469,8 @@ async function sendInvoiceRequestEmail (data) {
   await ses.send(new SendEmailCommand({
     Destination: {
       ToAddresses: [email],
-      CcAddresses: [accountingEmail],
+      // TODO: Uncomment for production
+      // CcAddresses: [accountingEmail],
       BccAddresses: [replyToAddress]
     },
     Message: {
