@@ -10,16 +10,18 @@ import { handler } from './index.js'
 var creditCardPayment = {
   httpMethod: 'POST',
   body: JSON.stringify({
-    applicant: "costa@trollhair.com",
-    name: "Costa Michailidis",
-    finalFee: "$13,500",
-    additionalSeats: 5,
-    paymentMethod: "credit-card",
-    company: "TrollHair Inc",
-    jobTitle: "CTO",
-    phone: "+1-212-206-1401",
-    country: "United States",
-    paymentMethodId: "pm_card_visa" // Stripe test payment method
+    payment: {
+      applicant: "costa@trollhair.com",
+      name: "Costa Michailidis",
+      finalFee: "$13,500",
+      additionalSeats: 5,
+      paymentMethod: "credit-card",
+      company: "TrollHair Inc",
+      jobTitle: "CTO",
+      phone: "+1-212-206-1401",
+      country: "United States",
+      paymentMethodId: "pm_card_visa" // Stripe test payment method
+    }
   })
 }
 
@@ -27,15 +29,17 @@ var creditCardPayment = {
 var invoiceRequest = {
   httpMethod: 'POST',
   body: JSON.stringify({
-    applicant: "costa@trollhair.com",
-    name: "Costa Michailidis",
-    finalFee: "$21,000",
-    additionalSeats: 2,
-    paymentMethod: "invoice",
-    company: "TrollHair Inc",
-    jobTitle: "CTO",
-    phone: "+1-212-206-1401",
-    country: "United States"
+    payment: {
+      applicant: "costa@trollhair.com",
+      name: "Costa Michailidis",
+      finalFee: "$21,000",
+      additionalSeats: 2,
+      paymentMethod: "invoice",
+      company: "TrollHair Inc",
+      jobTitle: "CTO",
+      phone: "+1-212-206-1401",
+      country: "United States"
+    }
   })
 }
 
@@ -43,15 +47,17 @@ var invoiceRequest = {
 var invalidTier = {
   httpMethod: 'POST',
   body: JSON.stringify({
-    applicant: "costa@trollhair.com",
-    name: "Costa Michailidis",
-    finalFee: "$10,000", // Not a valid tier
-    additionalSeats: 0,
-    paymentMethod: "invoice",
-    company: "TrollHair Inc",
-    jobTitle: "CTO",
-    phone: "+1-212-206-1401",
-    country: "United States"
+    payment: {
+      applicant: "costa@trollhair.com",
+      name: "Costa Michailidis",
+      finalFee: "$10,000", // Not a valid tier
+      additionalSeats: 0,
+      paymentMethod: "invoice",
+      company: "TrollHair Inc",
+      jobTitle: "CTO",
+      phone: "+1-212-206-1401",
+      country: "United States"
+    }
   })
 }
 
@@ -59,12 +65,14 @@ var invalidTier = {
 var missingField = {
   httpMethod: 'POST',
   body: JSON.stringify({
-    applicant: "costa@trollhair.com",
-    name: "Costa Michailidis",
-    finalFee: "$6,000",
-    additionalSeats: 0,
-    paymentMethod: "credit-card",
-    // Missing company, jobTitle, phone, country
+    payment: {
+      applicant: "costa@trollhair.com",
+      name: "Costa Michailidis",
+      finalFee: "$6,000",
+      additionalSeats: 0,
+      paymentMethod: "credit-card"
+      // Missing company, jobTitle, phone, country
+    }
   })
 }
 

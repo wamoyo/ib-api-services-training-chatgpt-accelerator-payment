@@ -39,6 +39,9 @@ export async function handler (event) {
   try {
     var json = event.body ? JSON.parse(event.body) : event
 
+    // Unwrap payment object from frontend
+    var paymentData = json.payment || json
+
     // Extract and validate payment data
     var {
       applicant,
@@ -51,7 +54,7 @@ export async function handler (event) {
       phone,
       country,
       paymentMethodId  // For Stripe credit card payments
-    } = json
+    } = paymentData
 
     // Validate required fields
     console.log(`Processing payment for ${applicant}`)
@@ -726,7 +729,7 @@ async function sendPaymentConfirmationEmail (data) {
     'To: ' + email,
     'Bcc: ' + replyToAddress,
     'Reply-To: ' + replyToAddress,
-    'Subject: ✅ Welcome to the 2026 AI Accelerator!',
+    'Subject: 🎉 Welcome To The 2026 AI Accelerator!',
     'MIME-Version: 1.0',
     'Content-Type: multipart/mixed; boundary="NextPart"',
     `List-Unsubscribe: <https://www.innovationbound.com/unsubscribe?email=${email}>`,

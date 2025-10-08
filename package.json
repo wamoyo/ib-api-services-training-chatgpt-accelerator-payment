@@ -14,7 +14,7 @@
     "stripe": "^17.4.0"
   },
   "scripts": {
-    "zip": "zip -r lambda.zip index.js payment-confirmation.html payment-confirmation.txt invoice-request.html invoice-request.txt node_modules/ package*",
+    "zip": "zip -r lambda.zip index.js payment-confirmation.html payment-confirmation.txt invoice-request.html invoice-request.txt Innovation-Bound-Logo.jpg node_modules/ package*",
     "create": "npm run zip && aws lambda create-function --function-name $npm_package_name --description \"$npm_package_description\" --runtime $IB_NODERUNTIME --role arn:aws:iam::204617980925:role/lambda-default --handler index.handler --timeout 10 --memory-size 256 --publish --zip-file fileb://lambda.zip --region us-east-1",
     "deploy": "npm run zip && aws lambda update-function-code --function-name $npm_package_name --zip-file fileb://lambda.zip --region us-east-1",
     "logs": "aws logs filter-log-events --log-group-name /aws/lambda/$npm_package_name --region us-east-1 | jq -r '.events[].message' | tr '\t' '\n'",
