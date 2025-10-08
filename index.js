@@ -9,12 +9,13 @@ import { readFile } from 'fs/promises'
 import Stripe from 'stripe'
 import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
+import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import PDFDocument from 'pdfkit'
 
-// TODO: Set STRIPE_SECRET_KEY environment variable
-// Test key format: sk_test_...
-// Live key format: sk_live_...
+// Environment variables required:
+// - STRIPE_KEY: Stripe secret key (sk_test_... or sk_live_...)
+// - TD_ROUTING: TD Bank routing number for ACH/Wire payments
+// - TD_ACCOUNT: TD Bank account number for ACH/Wire payments
 var stripe = new Stripe(process.env.STRIPE_KEY)
 
 var ses = new SESClient({ region: 'us-east-1' })
@@ -370,7 +371,7 @@ async function processInvoiceRequest (data) {
 
     return respond(200, {
       success: true,
-      message: 'Invoice request received! We\'ll send your invoice within 24 hours.',
+      message: 'Invoice sent! Check your inbox (it should arrive within a few minutes).',
       enrolled: false,
       pendingPayment: true
     })
@@ -386,6 +387,10 @@ async function processInvoiceRequest (data) {
 function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
   return new Promise((resolve, reject) => {
     var { name, email, company, jobTitle, phone, country, tierInfo, seats, totalAmount } = data
+
+    // Generate unique invoice number: ACC-123-456-7890 format
+    var timestamp = Math.floor(Date.now() / 1000).toString()
+    var invoiceNumber = `ACC-${timestamp.slice(0, 3)}-${timestamp.slice(3, 6)}-${timestamp.slice(6)}`
 
     var doc = new PDFDocument({ size: 'LETTER', margin: 50 })
     var chunks = []
@@ -426,13 +431,12 @@ function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
 
     // Invoice Details (Right side)
     var invoiceDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    var invoiceNumber = `AI-ACC-2026-${Date.now().toString().slice(-8)}`
 
     doc.fontSize(10)
        .fillColor('#666666')
        .text(`Invoice Number: ${invoiceNumber}`, 350, 105, { align: 'right' })
        .text(`Date: ${invoiceDate}`, 350, 118, { align: 'right' })
-       .text('Due: Net 30', 350, 131, { align: 'right' })
+       .text('Due: Upon Receipt', 350, 131, { align: 'right' })
 
     // Divider
     doc.moveTo(50, 175)
@@ -474,15 +478,37 @@ function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
     // Line Items
     var yPosition = 365
 
+    // Calculate scholarship discount
+    var fullPrice = 30000
+    var tierPrice = parseInt(tierInfo.tier)
+    var scholarshipAmount = fullPrice - tierPrice
+    var scholarshipPercent = Math.round((scholarshipAmount / fullPrice) * 100)
+
+    // Program fee at full price
     doc.fontSize(10)
        .fillColor('#333333')
        .text('2026 AI Accelerator Program', 50, yPosition)
-       .text(tierInfo.fee + ' Tier', 50, yPosition + 12, { fontSize: 9, fillColor: '#666666' })
+       .text('Full Price', 50, yPosition + 12, { fontSize: 9, fillColor: '#666666' })
        .text('1', 350, yPosition)
-       .text(tierInfo.fee, 420, yPosition)
-       .text(tierInfo.fee, 490, yPosition, { align: 'right' })
+       .text('$30,000', 420, yPosition)
+       .text('$30,000', 490, yPosition, { align: 'right' })
 
     yPosition += 45
+
+    // Scholarship discount (if applicable)
+    if (scholarshipAmount > 0) {
+      doc.fontSize(10)
+         .fillColor('#2ecc71')
+         .text(`Scholarship Discount (${scholarshipPercent}%)`, 50, yPosition)
+         .text('Congratulations!', 50, yPosition + 12, { fontSize: 9, fillColor: '#27ae60' })
+         .fillColor('#333333')
+         .text('1', 350, yPosition)
+         .fillColor('#2ecc71')
+         .text(`-$${scholarshipAmount.toLocaleString()}`, 420, yPosition)
+         .text(`-$${scholarshipAmount.toLocaleString()}`, 490, yPosition, { align: 'right' })
+
+      yPosition += 45
+    }
 
     if (seats > 0) {
       var seatCost = parseInt(tierInfo.tier) * 0.10
@@ -517,12 +543,130 @@ function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
 
     yPosition += 50
 
-    // Payment Terms
+    // Payment Instructions
+    doc.fontSize(11)
+       .fillColor('#1d2731')
+       .text('PAYMENT INSTRUCTIONS', 50, yPosition)
+
+    yPosition += 20
+
     doc.fontSize(10)
        .fillColor('#666666')
-       .text('Payment Terms: Net 30 days from invoice date', 50, yPosition)
-       .text('Please make checks payable to: Innovation Bound LLC', 50, yPosition + 15)
-       .text('Wire transfer details available upon request', 50, yPosition + 30)
+       .text('Payment Due: Upon Receipt', 50, yPosition)
+
+    yPosition += 20
+
+    // ACH/Wire Transfer (preferred)
+    doc.fontSize(10)
+       .fillColor('#1d2731')
+       .text('ACH or Wire Transfer (Preferred):', 50, yPosition)
+
+    yPosition += 15
+
+    var tdRouting = process.env.TD_ROUTING || '[TD_ROUTING not set]'
+    var tdAccount = process.env.TD_ACCOUNT || '[TD_ACCOUNT not set]'
+
+    doc.fontSize(9)
+       .fillColor('#666666')
+       .text(`Bank: TD Bank`, 60, yPosition)
+       .text(`Routing Number: ${tdRouting}`, 60, yPosition + 13)
+       .text(`Account Number: ${tdAccount}`, 60, yPosition + 26)
+       .text('Account Name: Innovation Bound LLC', 60, yPosition + 39)
+       .text('ACH is free | Wire transfers may incur fees paid by sender', 60, yPosition + 52, { fontSize: 8, fillColor: '#999999' })
+
+    yPosition += 75
+
+    // Check Payment
+    doc.fontSize(10)
+       .fillColor('#1d2731')
+       .text('Check Payment:', 50, yPosition)
+
+    yPosition += 15
+
+    doc.fontSize(9)
+       .fillColor('#666666')
+       .text('Make checks payable to: Innovation Bound LLC', 60, yPosition)
+       .text('Mail to: 7903 Seminole BLVD #2303, Seminole FL 33772', 60, yPosition + 13)
+
+    // Page 2: What's Included
+    doc.addPage()
+
+    // Header
+    doc.fontSize(18)
+       .fillColor('#1d2731')
+       .text('WHAT\'S INCLUDED IN YOUR TIER', 50, 50)
+
+    doc.fontSize(12)
+       .fillColor('#fdc844')
+       .text(tierInfo.fee + ' Tier', 50, 80)
+
+    // Divider
+    doc.moveTo(50, 100)
+       .lineTo(562, 100)
+       .strokeColor('#fdc844')
+       .lineWidth(2)
+       .stroke()
+
+    var includesY = 120
+
+    // What's Included (matches frontend exactly)
+    var coreFeatures = [
+      '12-month AI Training + Implementation program (January - December 2026)',
+      'AI strategy workshops for business owners only',
+      '100+ training sessions (live online + on-demand recordings)',
+      'About 2 hours per week time commitment for you and participating employees',
+      'Setup & Basic Training, Work-Specific Training, Custom AI Tools, and more...'
+    ]
+
+    doc.fontSize(9)
+       .fillColor('#333333')
+
+    coreFeatures.forEach(feature => {
+      doc.text('• ' + feature, 60, includesY, { width: 490 })
+      includesY += 18
+    })
+
+    // Support tier (matches frontend exactly)
+    var tierPrice = parseInt(tierInfo.tier)
+    var supportText = ''
+    var vipPerks = []
+
+    if (tierPrice <= 6000) {
+      supportText = 'Self-serve support library + 24 hour response email'
+    } else if (tierPrice <= 13500) {
+      supportText = 'Self-serve support library + large group office hours + 24 hour response email'
+    } else if (tierPrice <= 21000) {
+      supportText = 'Self-serve support library + small group office hours + 24 hour response email'
+    } else {
+      supportText = '10 hours of 1-on-1 technical support'
+      vipPerks = [
+        'Personal concierge available anytime',
+        'Podcast and in-person speaking opportunities',
+        '1 full day of on-site AI training or implementation at your HQ'
+      ]
+    }
+
+    doc.fontSize(9)
+       .fillColor('#1d2731')
+       .font('Helvetica-Bold')
+       .text('• ' + supportText, 60, includesY, { width: 490 })
+
+    includesY += 18
+
+    // VIP perks if applicable
+    if (vipPerks.length > 0) {
+      doc.font('Helvetica-Bold')
+         .fillColor('#1d2731')
+      vipPerks.forEach(perk => {
+        doc.text('• ' + perk, 60, includesY, { width: 490 })
+        includesY += 18
+      })
+    }
+
+    // Seats included
+    doc.font('Helvetica')
+       .fillColor('#333333')
+       .text('• 10 seats included (you + 9 teammates)', 60, includesY, { width: 490 })
 
     // Logo at bottom center
     doc.image('Innovation-Bound-Logo.jpg', 231, 680, { width: 150 })
