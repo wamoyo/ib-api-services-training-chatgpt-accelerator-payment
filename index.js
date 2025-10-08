@@ -634,9 +634,9 @@ function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
     if (tierPrice <= 6000) {
       supportText = 'Self-serve support library + 24 hour response email'
     } else if (tierPrice <= 13500) {
-      supportText = 'Self-serve support library + large group office hours + 24 hour response email'
+      supportText = 'Self-serve support library + monthly large group office hours + 24 hour response email'
     } else if (tierPrice <= 21000) {
-      supportText = 'Self-serve support library + small group office hours + 24 hour response email'
+      supportText = 'Self-serve support library + weekly small group office hours + 24 hour response email'
     } else {
       supportText = '10 hours of 1-on-1 technical support'
       vipPerks = [
