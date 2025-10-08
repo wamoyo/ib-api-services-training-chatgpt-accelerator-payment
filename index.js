@@ -7,9 +7,10 @@
 
 import { readFile } from 'fs/promises'
 import Stripe from 'stripe'
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
+import PDFDocument from 'pdfkit'
 
 // TODO: Set STRIPE_SECRET_KEY environment variable
 // Test key format: sk_test_...
@@ -78,7 +79,9 @@ export async function handler (event) {
 
     // Check if already paid (prevent double charging)
     if (application.Item.paymentStatus === 'paid') {
-      return respond(400, {error: 'Payment already completed for this application. Contact support@innovationbound.com if you need assistance.'})
+      return respond(400, {
+        error: `Payment already completed for ${application.Item.company || 'this application'} (${application.Item.email}). You enrolled on ${new Date(application.Item.paidAt).toLocaleDateString()}. Contact support@innovationbound.com if you need assistance.`
+      })
     }
 
     // Parse and validate tier
@@ -378,9 +381,166 @@ async function processInvoiceRequest (data) {
   }
 }
 
-// Side effect: Sends payment confirmation email
+// Pure: Generates invoice PDF and returns base64 encoded string
+// status: 'PAID' or 'DUE UPON RECEIPT'
+function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
+  return new Promise((resolve, reject) => {
+    var { name, email, company, jobTitle, phone, country, tierInfo, seats, totalAmount } = data
+
+    var doc = new PDFDocument({ size: 'LETTER', margin: 50 })
+    var chunks = []
+
+    // Collect PDF data chunks
+    doc.on('data', chunk => chunks.push(chunk))
+    doc.on('end', () => {
+      var pdfBuffer = Buffer.concat(chunks)
+      var base64PDF = pdfBuffer.toString('base64')
+      resolve(base64PDF)
+    })
+    doc.on('error', reject)
+
+    // Invoice Header
+    doc.fontSize(24)
+       .fillColor('#1d2731')
+       .text('INVOICE', { align: 'right' })
+
+    // Payment Status Badge
+    var statusColor = status === 'PAID' ? '#2ecc71' : '#e74c3c'
+    doc.fontSize(14)
+       .fillColor(statusColor)
+       .text(status, { align: 'right' })
+
+    doc.moveDown()
+
+    // Innovation Bound Info
+    doc.fontSize(16)
+       .fillColor('#1d2731')
+       .text('Innovation Bound LLC', 50, 80)
+
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text('7903 Seminole BLVD #2303', 50, 105)
+       .text('Seminole, FL 33772', 50, 118)
+       .text('(212) 602-1401', 50, 131)
+       .text('accounting@innovationbound.com', 50, 144)
+
+    // Invoice Details (Right side)
+    var invoiceDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    var invoiceNumber = `AI-ACC-2026-${Date.now().toString().slice(-8)}`
+
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text(`Invoice Number: ${invoiceNumber}`, 350, 105, { align: 'right' })
+       .text(`Date: ${invoiceDate}`, 350, 118, { align: 'right' })
+       .text('Due: Net 30', 350, 131, { align: 'right' })
+
+    // Divider
+    doc.moveTo(50, 175)
+       .lineTo(562, 175)
+       .strokeColor('#fdc844')
+       .lineWidth(2)
+       .stroke()
+
+    // Bill To Section
+    doc.moveDown(2)
+    doc.fontSize(12)
+       .fillColor('#1d2731')
+       .text('BILL TO:', 50, 195)
+
+    doc.fontSize(11)
+       .fillColor('#333333')
+       .text(name, 50, 215)
+       .text(jobTitle, 50, 230)
+       .text(company, 50, 245)
+       .text(email, 50, 260)
+       .text(phone, 50, 275)
+       .text(country, 50, 290)
+
+    // Line Items Header
+    doc.fontSize(11)
+       .fillColor('#1d2731')
+       .text('DESCRIPTION', 50, 335)
+       .text('QTY', 350, 335)
+       .text('RATE', 420, 335)
+       .text('AMOUNT', 490, 335, { align: 'right' })
+
+    // Divider under header
+    doc.moveTo(50, 350)
+       .lineTo(562, 350)
+       .strokeColor('#cccccc')
+       .lineWidth(1)
+       .stroke()
+
+    // Line Items
+    var yPosition = 365
+
+    doc.fontSize(10)
+       .fillColor('#333333')
+       .text('2026 AI Accelerator Program', 50, yPosition)
+       .text(tierInfo.fee + ' Tier', 50, yPosition + 12, { fontSize: 9, fillColor: '#666666' })
+       .text('1', 350, yPosition)
+       .text(tierInfo.fee, 420, yPosition)
+       .text(tierInfo.fee, 490, yPosition, { align: 'right' })
+
+    yPosition += 45
+
+    if (seats > 0) {
+      var seatCost = parseInt(tierInfo.tier) * 0.10
+      var seatTotal = seatCost * seats
+
+      doc.fontSize(10)
+         .fillColor('#333333')
+         .text('Additional Seats', 50, yPosition)
+         .text('(10% of tier price per seat)', 50, yPosition + 12, { fontSize: 9, fillColor: '#666666' })
+         .text(seats.toString(), 350, yPosition)
+         .text(`$${seatCost.toLocaleString()}`, 420, yPosition)
+         .text(`$${seatTotal.toLocaleString()}`, 490, yPosition, { align: 'right' })
+
+      yPosition += 45
+    }
+
+    // Divider before totals
+    doc.moveTo(350, yPosition)
+       .lineTo(562, yPosition)
+       .strokeColor('#cccccc')
+       .lineWidth(1)
+       .stroke()
+
+    yPosition += 15
+
+    // Total
+    doc.fontSize(12)
+       .fillColor('#1d2731')
+       .text('TOTAL DUE:', 350, yPosition)
+       .fontSize(14)
+       .text(`$${totalAmount.toLocaleString()}`, 490, yPosition, { align: 'right' })
+
+    yPosition += 50
+
+    // Payment Terms
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text('Payment Terms: Net 30 days from invoice date', 50, yPosition)
+       .text('Please make checks payable to: Innovation Bound LLC', 50, yPosition + 15)
+       .text('Wire transfer details available upon request', 50, yPosition + 30)
+
+    // Logo at bottom center
+    doc.image('Innovation-Bound-Logo.jpg', 231, 680, { width: 150 })
+
+    // Footer
+    doc.fontSize(9)
+       .fillColor('#999999')
+       .text('Thank you for enrolling in the 2026 AI Accelerator!', 50, 715, { align: 'center', width: 512 })
+       .text('Questions? Contact accounting@innovationbound.com or call (212) 602-1401', 50, 730, { align: 'center', width: 512 })
+
+    // Finalize PDF
+    doc.end()
+  })
+}
+
+// Side effect: Sends payment confirmation email with PAID invoice PDF
 async function sendPaymentConfirmationEmail (data) {
-  var { name, email, tierInfo, seats, totalAmount, company } = data
+  var { name, email, tierInfo, seats, totalAmount, company, phone, jobTitle, country } = data
 
   var rawHtml = await readFile("payment-confirmation.html", "utf8")
   var rawTxt = await readFile("payment-confirmation.txt", "utf8")
@@ -409,31 +569,50 @@ async function sendPaymentConfirmationEmail (data) {
     .replace(/{{tracking}}/g, tracking)
     .replace(/{{emailSettings}}/g, `https://www.innovationbound.com/unsubscribe?email=${email}`)
 
-  await ses.send(new SendEmailCommand({
-    Destination: {
-      ToAddresses: [email],
-      BccAddresses: [replyToAddress]
-    },
-    Message: {
-      Body: {
-        Html: { Charset: "UTF-8", Data: html },
-        Text: { Charset: "UTF-8", Data: txt }
-      },
-      Subject: {
-        Charset: "UTF-8",
-        Data: `✅ Welcome to the 2026 AI Accelerator!`
-      }
-    },
-    ReplyToAddresses: [replyToAddress],
-    Source: replyToAddress
+  // Generate PAID invoice PDF
+  console.log(`Generating PAID invoice PDF for ${email}`)
+  var pdfBase64 = await generateInvoicePDF(data, 'PAID')
+
+  // Build raw email with PDF attachment
+  var invoiceDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  var filename = `Innovation-Bound-AI-Accelerator-Invoice-PAID-${invoiceDate.replace(/\s/g, '-')}.pdf`
+
+  var rawEmail = [
+    'From: ' + replyToAddress,
+    'To: ' + email,
+    'Bcc: ' + replyToAddress,
+    'Reply-To: ' + replyToAddress,
+    'Subject: ✅ Welcome to the 2026 AI Accelerator!',
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/mixed; boundary="NextPart"',
+    `List-Unsubscribe: <https://www.innovationbound.com/unsubscribe?email=${email}>`,
+    'List-Unsubscribe-Post: List-Unsubscribe=One-Click',
+    '',
+    '--NextPart',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    html,
+    '--NextPart',
+    'Content-Type: application/pdf',
+    `Content-Disposition: attachment; filename="${filename}"`,
+    'Content-Transfer-Encoding: base64',
+    '',
+    pdfBase64,
+    '--NextPart--'
+  ].join('\r\n')
+
+  await ses.send(new SendRawEmailCommand({
+    RawMessage: { Data: rawEmail },
+    Source: replyToAddress.match(/<(.+)>/)[1] // Extract email from "Name <email>" format
   }))
 
-  console.log(`Payment confirmation email sent to ${email}`)
+  console.log(`Payment confirmation email with PAID invoice PDF sent to ${email}`)
 }
 
-// Side effect: Sends invoice request email
+// Side effect: Sends invoice request email with PDF attachment
 async function sendInvoiceRequestEmail (data) {
-  var { name, email, tierInfo, seats, totalAmount, company, phone, jobTitle } = data
+  var { name, email, tierInfo, seats, totalAmount, company, phone, jobTitle, country } = data
 
   var rawHtml = await readFile("invoice-request.html", "utf8")
   var rawTxt = await readFile("invoice-request.txt", "utf8")
@@ -466,28 +645,47 @@ async function sendInvoiceRequestEmail (data) {
     .replace(/{{tracking}}/g, tracking)
     .replace(/{{emailSettings}}/g, `https://www.innovationbound.com/unsubscribe?email=${email}`)
 
-  await ses.send(new SendEmailCommand({
-    Destination: {
-      ToAddresses: [email],
-      // TODO: Uncomment for production
-      // CcAddresses: [accountingEmail],
-      BccAddresses: [replyToAddress]
-    },
-    Message: {
-      Body: {
-        Html: { Charset: "UTF-8", Data: html },
-        Text: { Charset: "UTF-8", Data: txt }
-      },
-      Subject: {
-        Charset: "UTF-8",
-        Data: `📄 Invoice Request for 2026 AI Accelerator`
-      }
-    },
-    ReplyToAddresses: [replyToAddress],
-    Source: replyToAddress
+  // Generate invoice PDF
+  console.log(`Generating invoice PDF for ${email}`)
+  var pdfBase64 = await generateInvoicePDF(data, 'DUE UPON RECEIPT')
+
+  // Build raw email with PDF attachment
+  var invoiceDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  var filename = `Innovation-Bound-AI-Accelerator-Invoice-${invoiceDate.replace(/\s/g, '-')}.pdf`
+
+  var rawEmail = [
+    'From: ' + replyToAddress,
+    'To: ' + email,
+    // TODO: Uncomment for production
+    // 'Cc: ' + accountingEmail,
+    'Bcc: ' + replyToAddress,
+    'Reply-To: ' + replyToAddress,
+    'Subject: 📄 Invoice Request for 2026 AI Accelerator',
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/mixed; boundary="NextPart"',
+    `List-Unsubscribe: <https://www.innovationbound.com/unsubscribe?email=${email}>`,
+    'List-Unsubscribe-Post: List-Unsubscribe=One-Click',
+    '',
+    '--NextPart',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    html,
+    '--NextPart',
+    'Content-Type: application/pdf',
+    `Content-Disposition: attachment; filename="${filename}"`,
+    'Content-Transfer-Encoding: base64',
+    '',
+    pdfBase64,
+    '--NextPart--'
+  ].join('\r\n')
+
+  await ses.send(new SendRawEmailCommand({
+    RawMessage: { Data: rawEmail },
+    Source: replyToAddress.match(/<(.+)>/)[1] // Extract email from "Name <email>" format
   }))
 
-  console.log(`Invoice request email sent to ${email} (CC: ${accountingEmail})`)
+  console.log(`Invoice request email with PDF sent to ${email} (BCC: ${replyToAddress})`)
 }
 
 function respond (code, message) {

@@ -76,7 +76,7 @@ var optionsRequest = {
 console.log('Running payment Lambda test...\n')
 
 // CHANGE THIS LINE TO SWITCH TESTS:
-var testToRun = creditCardPayment  // Change to: creditCardPayment
+var testToRun = invoiceRequest  // Change to: creditCardPayment
 
 if (testToRun === invoiceRequest) {
   console.log('Testing INVOICE REQUEST for costa@trollhair.com')

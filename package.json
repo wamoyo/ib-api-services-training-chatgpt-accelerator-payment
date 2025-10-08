@@ -10,6 +10,7 @@
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-ses": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "pdfkit": "^0.17.2",
     "stripe": "^17.4.0"
   },
   "scripts": {

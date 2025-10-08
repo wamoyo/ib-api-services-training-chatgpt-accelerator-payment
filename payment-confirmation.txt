@@ -1,13 +1,13 @@
 
 ✅ WELCOME TO THE 2026 AI ACCELERATOR!
 
-Your payment was successful. Welcome aboard, {{name}}!
+Congratulations {{name}} - you're officially enrolled! Your payment has been processed and your invoice is attached.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📺 WATCH YOUR WELCOME VIDEO
 
-Click below to watch a special welcome message and learn what's next:
+Click below to watch your welcome message and learn what's next:
 
 ▶️ WATCH WELCOME VIDEO »
 https://www.innovationbound.com/videos/2026-ai-accelerator-welcome?{{tracking}}
