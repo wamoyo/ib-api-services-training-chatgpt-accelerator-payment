@@ -1,0 +1,35 @@
+
+📋 APPLICATION CONFIRMED
+
+Thank you for applying to Innovation Bound's 2026 AI Accelerator.
+
+We will review your application and respond within 3 days.
+
+Application Information:
+- Name: {{name}}
+- Email: {{email}}
+- Company Website: {{website}}
+- LinkedIn Profile: {{linkedin}}
+- Financial Assistance Requested: {{assistancePercent}}% ({{assistanceAmount}})
+
+📄 GET THE FULL PROGRAM OVERVIEW (PDF) »
+https://www.innovationbound.com/pdfs/2026-AI-Accelerator-Full-Program-Overview.pdf
+
+Feel free to follow us on LinkedIn for now (https://www.linkedin.com/company/innovation-bound/),
+or visit our website (https://www.innovationbound.com) to learn more about us.
+
+Warm Regards,
+The Innovation Bound Team
+support@innovationbound.com
+
+--------------------------------------------------------------------------------
+
+This is a notification email from InnovationBound.com for your scholarship application.
+You have not been subscribed to anything.
+
+To check your email settings with us visit »
+{{emailSettings}}
+
+Visit Innovation Bound's AI Accelerator application page where this email originated »
+www.InnovationBound.com/chatgpt-training/small-business-ai-accelerator
+

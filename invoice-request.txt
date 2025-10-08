@@ -1,0 +1,60 @@
+
+📄 INVOICE REQUEST RECEIVED
+
+Thank you for your enrollment, {{name}}! We'll send your invoice within 24 hours.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📺 WATCH YOUR WELCOME VIDEO
+
+While you wait for your invoice, watch your welcome message and learn what's next:
+
+▶️ WATCH WELCOME VIDEO »
+https://www.innovationbound.com/videos/2026-ai-accelerator-welcome?{{tracking}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR ENROLLMENT DETAILS
+
+- Tier: {{tier}}
+- Total Seats: {{totalSeats}} (10 base + {{additionalSeats}} additional)
+- Total Amount: {{totalAmount}}
+- Company: {{company}}
+- Contact: {{name}}, {{jobTitle}}
+- Phone: {{phone}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PAYMENT INSTRUCTIONS
+
+Your invoice will include ACH payment instructions and is due upon receipt.
+
+Once we receive your payment, you'll get immediate access to:
+
+- The AI Accelerator platform
+- Instructions for adding your team members
+- Program schedule and upcoming sessions
+- Getting started checklist
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Questions about your invoice?
+Contact accounting@innovationbound.com or call/text us at (212) 206-1401.
+
+We're excited to accelerate your business with AI!
+
+The Innovation Bound Team
+support@innovationbound.com
+https://www.innovationbound.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This is an invoice request confirmation from InnovationBound.com for the 2026 AI Accelerator.
+You are not subscribed to anything.
+
+To check your email settings with us visit »
+{{emailSettings}}
+
+Visit Innovation Bound's AI Accelerator application page where this email originated »
+www.InnovationBound.com/chatgpt-training/small-business-ai-accelerator
+

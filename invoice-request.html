@@ -1,0 +1,112 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Innovation Bound</title>
+  <style>
+    @media only screen and (min-device-width: 541px) { .content { width: 540px !important; } }
+    body {
+      font-family: "Fira-Sans", sans-serif;
+      color: #1d2731;
+    }
+    em {
+      font-style: italic;
+    }
+    a {
+      color: #1d2731 !important;
+      font-weight: bold !important;
+      text-decoration: none !important;
+    }
+    a.button {
+      display: inline-block;
+      border: 2px solid #fdc844;
+      border-radius: .2em;
+      background: #fdc844;
+      padding: .5em;
+      margin: .5em 0;
+      color: #1d2731;
+      font-weight: bold;
+      text-decoration: none;
+      transition: .5s;
+    }
+    a.button:hover {
+      background: #fff !important;
+    }
+    a.button:active {
+      outline: 0;
+      border: 2px solid #1d2731 !important;
+    }
+    img.content {
+      display: block;
+      max-width: 540px;
+      width: 100%;
+      border-radius: .2em;
+      margin: .5em 0;
+    }
+    hr {
+      height: 2px;
+      border: 0;
+      background-image: linear-gradient( 90deg, rgba(253,200,68,1), rgba(228,228,228,0) ) !important;
+    }
+    p.footer {
+      font-weight: 300;
+    }
+  </style>
+</head>
+<body>
+  <table class="content" align="left" cellpadding="10" cellspacing="0" border="0" style="width: 100%; max-width: 540px;">
+    <tr>
+    <td>
+      <a href="https://www.innovationbound.com">
+        <img style="width:100%;max-width:300px;" src="https://www.innovationbound.com/images/Innovation-Bound-Logo.png" alt="Greetings from the Innovation Bound Team!">
+      </a>
+      <h1>📄 Invoice Request Received</h1>
+      <p style="font-size:1.2em;">Thank you for your enrollment, {{name}}! We'll send your invoice within <strong>24 hours</strong>.</p>
+
+      <h2>📺 Watch Your Welcome Video</h2>
+      <p style="font-size:1.1em;">While you wait for your invoice, watch your welcome message and learn what's next:</p>
+      <a href="https://www.innovationbound.com/videos/2026-ai-accelerator-welcome?{{tracking}}">
+        <img class="content" src="https://www.innovationbound.com/images/2026-accelerator-welcome-video-thumbnail.jpg" alt="Watch Welcome Video" style="cursor: pointer; border: 3px solid #fdc844;">
+      </a>
+      <a class="button" style="display: inline-block; border: 2px solid #fdc844; border-radius: .2em; background: #fdc844; padding: .5em; margin: .5em 0; color: #1d2731; font-weight: bold; font-size: 1.2em; text-decoration: none;" href="https://www.innovationbound.com/videos/2026-ai-accelerator-welcome?{{tracking}}">▶️ Watch Welcome Video »</a>
+
+      <h2>Your Enrollment Details</h2>
+      <ul>
+        <li><strong>Tier:</strong> {{tier}}</li>
+        <li><strong>Total Seats:</strong> {{totalSeats}} (10 base + {{additionalSeats}} additional)</li>
+        <li><strong>Total Amount:</strong> {{totalAmount}}</li>
+        <li><strong>Company:</strong> {{company}}</li>
+        <li><strong>Contact:</strong> {{name}}, {{jobTitle}}</li>
+        <li><strong>Phone:</strong> {{phone}}</li>
+      </ul>
+
+      <h2>Payment Instructions</h2>
+      <p>Your invoice will include ACH payment instructions and is due upon receipt.</p>
+      <p>Once we receive your payment, you'll get immediate access to:</p>
+      <ul>
+        <li>The AI Accelerator platform</li>
+        <li>Instructions for adding your team members</li>
+        <li>Program schedule and upcoming sessions</li>
+        <li>Getting started checklist</li>
+      </ul>
+
+      <p style="font-size:1.3em;">Questions about your invoice? Contact <a href="mailto:accounting@innovationbound.com">accounting@innovationbound.com</a> or call/text us at <strong>(212)&nbsp;206-1401</strong>.</p>
+
+      <p>
+        <span>We're excited to accelerate your business with AI!</span>
+        <br>
+        <a href="https://www.innovationbound.com">The Innovation Bound Team</a>
+        <br>
+        <a style="color: #1d2731; font-weight: bold; text-decoration: none;" href="mailto:support@innovationbound.com">support@innovationbound.com</a>
+      </p>
+      <br>
+      <hr>
+      <br>
+      <p class="footer">This is an invoice request confirmation from InnovationBound.com for the 2026 AI Accelerator. You are not subscribed to anything.</p>
+      <p class="footer">To check your email settings with us visit » <a style="color: #1d2731; font-weight: bold; text-decoration: none;" href="{{emailSettings}}">emailSettings</a></p>
+      <p class="footer">Visit Innovation Bound's AI Accelerator application page where this email originated&nbsp;» <a style="color: #1d2731; font-weight: bold; text-decoration: none;" href="https://www.innovationbound.com/chatgpt-training/small-business-ai-accelerator">www.InnovationBound.com/chatgpt-training/small-business-ai-accelerator</a></p>
+      <p class="footer"><span style="font-size: .85em;">Postal address: 7903 Seminole BLVD, Seminole FL 33772</span></p>
+    </td>
+    </tr>
+  </table>
+</body>
+</html>

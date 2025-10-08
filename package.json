@@ -1,0 +1,27 @@
+{
+  "name": "ib-api-services-training-chatgpt-accelerator-payment",
+  "version": "1.0.0",
+  "description": "Process payment or invoice request for 2026 AI Accelerator enrollment",
+  "author": "Costa Michailidis <costa@innovationbound.com> (http://www.github.com/wamoyo)",
+  "main": "index.js",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-ses": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "stripe": "^17.4.0"
+  },
+  "scripts": {
+    "zip": "zip -r lambda.zip index.js payment-confirmation.html payment-confirmation.txt invoice-request.html invoice-request.txt node_modules/ package*",
+    "create": "npm run zip && aws lambda create-function --function-name $npm_package_name --description \"$npm_package_description\" --runtime $IB_NODERUNTIME --role arn:aws:iam::204617980925:role/lambda-default --handler index.handler --timeout 10 --memory-size 256 --publish --zip-file fileb://lambda.zip --region us-east-1",
+    "deploy": "npm run zip && aws lambda update-function-code --function-name $npm_package_name --zip-file fileb://lambda.zip --region us-east-1",
+    "logs": "aws logs filter-log-events --log-group-name /aws/lambda/$npm_package_name --region us-east-1 | jq -r '.events[].message' | tr '\t' '\n'",
+    "reset-env": "f(){ aws lambda update-function-configuration --function-name $npm_package_name --region us-east-1 --environment Variables={$1} ;};f",
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wamoyo/ib-api-services-training-chatgpt-accelerator-payment.git"
+  }
+}

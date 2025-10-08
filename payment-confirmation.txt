@@ -1,0 +1,55 @@
+
+✅ WELCOME TO THE 2026 AI ACCELERATOR!
+
+Your payment was successful. Welcome aboard, {{name}}!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📺 WATCH YOUR WELCOME VIDEO
+
+Click below to watch a special welcome message and learn what's next:
+
+▶️ WATCH WELCOME VIDEO »
+https://www.innovationbound.com/videos/2026-ai-accelerator-welcome?{{tracking}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR ENROLLMENT DETAILS
+
+- Tier: {{tier}}
+- Total Seats: {{totalSeats}} (10 base + {{additionalSeats}} additional)
+- Total Amount Paid: {{totalAmount}}
+- Company: {{company}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S NEXT?
+
+You'll receive your program welcome kit within 24 hours with:
+
+- Access to the AI Accelerator platform
+- Instructions for adding your team members
+- Program schedule and upcoming sessions
+- Getting started checklist
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Have questions? Simply reply to this email or call/text us at (212) 206-1401.
+
+We're excited to accelerate your business with AI!
+
+The Innovation Bound Team
+support@innovationbound.com
+https://www.innovationbound.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This is a payment confirmation email from InnovationBound.com for the 2026 AI Accelerator.
+You are not subscribed to anything.
+
+To check your email settings with us visit »
+{{emailSettings}}
+
+Visit Innovation Bound's AI Accelerator application page where this email originated »
+www.InnovationBound.com/chatgpt-training/small-business-ai-accelerator
+
