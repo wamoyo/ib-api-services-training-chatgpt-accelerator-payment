@@ -385,15 +385,42 @@ async function processInvoiceRequest (data) {
   }
 }
 
+// Side effect: Gets next sequential invoice number from DynamoDB
+async function getNextInvoiceNumber () {
+  try {
+    var result = await db.send(new UpdateCommand({
+      TableName: 'www.innovationbound.com',
+      Key: {
+        pk: 'counter#invoice',
+        sk: 'ai-accelerator-2026'
+      },
+      UpdateExpression: 'SET #num = if_not_exists(#num, :start) + :inc',
+      ExpressionAttributeNames: {
+        '#num': 'number'
+      },
+      ExpressionAttributeValues: {
+        ':start': 4999, // Start at 4999, first increment will be 5000
+        ':inc': 1
+      },
+      ReturnValues: 'UPDATED_NEW'
+    }))
+
+    return result.Attributes.number
+  } catch (error) {
+    console.error('Error getting invoice number:', error)
+    throw error // Re-throw so we know if invoice numbering fails
+  }
+}
+
 // Pure: Generates invoice PDF and returns base64 encoded string
 // status: 'PAID' or 'DUE UPON RECEIPT'
-function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
-  return new Promise((resolve, reject) => {
+async function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
+  return new Promise(async (resolve, reject) => {
     var { name, email, company, jobTitle, phone, country, tierInfo, seats, totalAmount } = data
 
-    // Generate unique invoice number: ACC-123-456-7890 format
-    var timestamp = Math.floor(Date.now() / 1000).toString()
-    var invoiceNumber = `ACC-${timestamp.slice(0, 3)}-${timestamp.slice(3, 6)}-${timestamp.slice(6)}`
+    // Get next sequential invoice number
+    var invoiceNum = await getNextInvoiceNumber()
+    var invoiceNumber = `ACC-${invoiceNum}`
 
     var doc = new PDFDocument({ size: 'LETTER', margin: 50 })
     var chunks = []
