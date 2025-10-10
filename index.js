@@ -719,7 +719,7 @@ async function sendPaymentConfirmationEmail (data) {
   var rawHtml = await readFile("payment-confirmation.html", "utf8")
   var rawTxt = await readFile("payment-confirmation.txt", "utf8")
 
-  var tracking = `email=${email}&list=ai-accelerator-payment&edition=confirmation`
+  var tracking = `email=${email}&list=ai-accelerator-applications&edition=payment-confirmation`
 
   var html = rawHtml
     .replace(/{{name}}/g, name)
@@ -791,7 +791,7 @@ async function sendInvoiceRequestEmail (data) {
   var rawHtml = await readFile("invoice-request.html", "utf8")
   var rawTxt = await readFile("invoice-request.txt", "utf8")
 
-  var tracking = `email=${email}&list=ai-accelerator-payment&edition=invoice-request`
+  var tracking = `email=${email}&list=ai-accelerator-applications&edition=invoice-request`
 
   var html = rawHtml
     .replace(/{{name}}/g, name)
