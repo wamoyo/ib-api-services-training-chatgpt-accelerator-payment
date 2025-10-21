@@ -851,8 +851,7 @@ async function sendInvoiceRequestEmail (data) {
   var rawEmail = [
     'From: ' + replyToAddress,
     'To: ' + email,
-    // TODO: Uncomment for production
-    // 'Cc: ' + accountingEmail,
+    'Cc: ' + accountingEmail,
     'Bcc: ' + replyToAddress,
     'Reply-To: ' + replyToAddress,
     'Subject: 📄 Invoice Request for 2026 AI Accelerator',
