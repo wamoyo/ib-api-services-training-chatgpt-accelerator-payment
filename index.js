@@ -24,12 +24,10 @@ var db = DynamoDBDocumentClient.from(dynamoDb)
 var replyToAddress = "Innovation Bound <support@innovationbound.com>"
 var accountingEmail = "accounting@innovationbound.com"
 
-// Valid tier amounts in dollars
+// Valid tiers
 var validTiers = {
-  '6000': { tier: '6000', fee: '$6,000', seatCost: '$600' },
-  '13500': { tier: '13500', fee: '$13,500', seatCost: '$1,350' },
-  '21000': { tier: '21000', fee: '$21,000', seatCost: '$2,100' },
-  '30000': { tier: '30000', fee: '$30,000', seatCost: '$3,000' }
+  'scholarship': { tier: '6000', fee: '$6,000', seatCost: '$600', name: 'Foundational' },
+  'vip': { tier: '30000', fee: '$30,000', seatCost: '$3,000', name: 'VIP' }
 }
 
 export async function handler (event) {
@@ -46,8 +44,9 @@ export async function handler (event) {
     var {
       applicant,
       name,
-      finalFee,
+      tier,
       additionalSeats,
+      addonSupportHours,
       paymentMethod,
       company,
       jobTitle,
@@ -61,7 +60,7 @@ export async function handler (event) {
 
     if (!applicant) return respond(400, {error: 'Applicant email is required.'})
     if (!name) return respond(400, {error: 'Name is required.'})
-    if (!finalFee) return respond(400, {error: 'Final fee is required.'})
+    if (!tier) return respond(400, {error: 'Tier is required.'})
     if (!paymentMethod) return respond(400, {error: 'Payment method is required.'})
     if (!['credit-card', 'invoice'].includes(paymentMethod)) {
       return respond(400, {error: 'Payment method must be "credit-card" or "invoice".'})
@@ -88,13 +87,13 @@ export async function handler (event) {
       })
     }
 
-    // Parse and validate tier
-    var tierAmount = parseTierAmount(finalFee)
-    if (!tierAmount) {
-      return respond(400, {error: 'Invalid tier. Must be $6,000, $13,500, $21,000, or $30,000.'})
+    // Validate tier
+    var tierInfo = validTiers[tier]
+    if (!tierInfo) {
+      return respond(400, {error: 'Invalid tier. Must be "scholarship" or "vip".'})
     }
 
-    var tierInfo = validTiers[tierAmount]
+    var tierAmount = tierInfo.tier
 
     // Validate and parse additional seats
     var seats = parseInt(additionalSeats) || 0
@@ -102,12 +101,19 @@ export async function handler (event) {
       return respond(400, {error: 'Additional seats must be between 0 and 40.'})
     }
 
+    // Validate and parse addon support hours
+    var supportHours = parseInt(addonSupportHours) || 0
+    if (supportHours < 0 || supportHours > 100) {
+      return respond(400, {error: 'Addon support hours must be between 0 and 100.'})
+    }
+
     // Calculate total amount (in cents for Stripe)
     var seatPrice = parseInt(tierAmount) * 0.1 // 10% of tier price
-    var totalAmount = parseInt(tierAmount) + (seatPrice * seats)
+    var supportPrice = 300 // $300 per hour
+    var totalAmount = parseInt(tierAmount) + (seatPrice * seats) + (supportPrice * supportHours)
     var totalAmountCents = totalAmount * 100
 
-    console.log(`Tier: ${tierInfo.fee}, Additional seats: ${seats}, Total: $${totalAmount.toLocaleString()}`)
+    console.log(`Tier: ${tierInfo.fee}, Additional seats: ${seats}, Addon support hours: ${supportHours}, Total: $${totalAmount.toLocaleString()}`)
 
     // Route to appropriate payment flow
     if (paymentMethod === 'credit-card') {
@@ -118,6 +124,7 @@ export async function handler (event) {
         tierInfo,
         tierAmount,
         seats,
+        supportHours,
         totalAmount,
         totalAmountCents,
         company,
@@ -134,6 +141,7 @@ export async function handler (event) {
         tierInfo,
         tierAmount,
         seats,
+        supportHours,
         totalAmount,
         totalAmountCents,
         company,
@@ -149,16 +157,6 @@ export async function handler (event) {
   }
 }
 
-// Pure: Parses tier amount from formatted string (e.g., "$13,500" -> "13500")
-function parseTierAmount (feeString) {
-  var cleaned = feeString.replace(/[$,]/g, '')
-  var amount = parseInt(cleaned)
-  if (validTiers[amount.toString()]) {
-    return amount.toString()
-  }
-  return null
-}
-
 // Side effect: Processes credit card payment via Stripe
 async function processCreditCardPayment (data) {
   var {
@@ -168,6 +166,7 @@ async function processCreditCardPayment (data) {
     tierInfo,
     tierAmount,
     seats,
+    supportHours,
     totalAmount,
     totalAmountCents,
     company,
@@ -185,6 +184,10 @@ async function processCreditCardPayment (data) {
     console.log(`Processing Stripe payment: $${totalAmount} for ${applicant}`)
 
     // Create and confirm payment with Stripe
+    var descriptionParts = [`2026 AI Accelerator - ${tierInfo.fee} tier`]
+    if (seats > 0) descriptionParts.push(`${seats} additional seats`)
+    if (supportHours > 0) descriptionParts.push(`${supportHours} support hours`)
+
     var paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmountCents,
       currency: 'usd',
@@ -194,12 +197,13 @@ async function processCreditCardPayment (data) {
         enabled: true,
         allow_redirects: 'never'
       },
-      description: `2026 AI Accelerator - ${tierInfo.fee} tier + ${seats} additional seats`,
+      description: descriptionParts.join(' + '),
       metadata: {
         applicant: applicant,
         program: '2026-ai-accelerator',
         tier: tierAmount,
         additionalSeats: seats.toString(),
+        addonSupportHours: supportHours.toString(),
         company: company
       }
     })
@@ -218,13 +222,14 @@ async function processCreditCardPayment (data) {
     await db.send(new UpdateCommand({
       TableName: "www.innovationbound.com",
       Key: { pk: "application#ai-accelerator", sk: applicant },
-      UpdateExpression: "SET paymentMethod = :method, paymentStatus = :status, paymentAmount = :amount, finalFee = :fee, additionalSeats = :seats, company = :company, jobTitle = :title, phone = :phone, country = :country, stripePaymentId = :stripeId, paidAt = :paidAt, enrolled = :enrolled",
+      UpdateExpression: "SET paymentMethod = :method, paymentStatus = :status, paymentAmount = :amount, finalFee = :fee, additionalSeats = :seats, addonSupportHours = :supportHours, company = :company, jobTitle = :title, phone = :phone, country = :country, stripePaymentId = :stripeId, paidAt = :paidAt, enrolled = :enrolled",
       ExpressionAttributeValues: {
         ":method": "credit-card",
         ":status": "paid",
         ":amount": totalAmountCents,
         ":fee": parseInt(tierAmount),
         ":seats": seats,
+        ":supportHours": supportHours,
         ":company": company,
         ":title": jobTitle,
         ":phone": phone,
@@ -255,6 +260,7 @@ async function processCreditCardPayment (data) {
         paymentPlan: "full",
         baseSeats: 10,
         additionalSeats: seats,
+        addonSupportHours: supportHours,
         totalSeats: 10 + seats,
         stripePaymentId: paymentIntent.id,
         enrolledAt: new Date().toJSON(),
@@ -268,6 +274,7 @@ async function processCreditCardPayment (data) {
       email: applicant,
       tierInfo,
       seats,
+      supportHours,
       totalAmount,
       company
     })
@@ -303,6 +310,7 @@ async function processInvoiceRequest (data) {
     tierInfo,
     tierAmount,
     seats,
+    supportHours,
     totalAmount,
     totalAmountCents,
     company,
@@ -318,13 +326,14 @@ async function processInvoiceRequest (data) {
     await db.send(new UpdateCommand({
       TableName: "www.innovationbound.com",
       Key: { pk: "application#ai-accelerator", sk: applicant },
-      UpdateExpression: "SET paymentMethod = :method, paymentStatus = :status, paymentAmount = :amount, finalFee = :fee, additionalSeats = :seats, company = :company, jobTitle = :title, phone = :phone, country = :country, invoiceRequestedAt = :requestedAt, enrolled = :enrolled",
+      UpdateExpression: "SET paymentMethod = :method, paymentStatus = :status, paymentAmount = :amount, finalFee = :fee, additionalSeats = :seats, addonSupportHours = :supportHours, company = :company, jobTitle = :title, phone = :phone, country = :country, invoiceRequestedAt = :requestedAt, enrolled = :enrolled",
       ExpressionAttributeValues: {
         ":method": "invoice",
         ":status": "pending",
         ":amount": totalAmountCents,
         ":fee": parseInt(tierAmount),
         ":seats": seats,
+        ":supportHours": supportHours,
         ":company": company,
         ":title": jobTitle,
         ":phone": phone,
@@ -354,6 +363,7 @@ async function processInvoiceRequest (data) {
         paymentPlan: null,
         baseSeats: 10,
         additionalSeats: seats,
+        addonSupportHours: supportHours,
         totalSeats: 10 + seats,
         enrolledAt: new Date().toJSON(),
         paymentMethod: "invoice"
@@ -366,6 +376,7 @@ async function processInvoiceRequest (data) {
       email: applicant,
       tierInfo,
       seats,
+      supportHours,
       totalAmount,
       company,
       phone,
@@ -416,7 +427,7 @@ async function getNextInvoiceNumber () {
 // status: 'PAID' or 'DUE UPON RECEIPT'
 async function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
   return new Promise(async (resolve, reject) => {
-    var { name, email, company, jobTitle, phone, country, tierInfo, seats, totalAmount } = data
+    var { name, email, company, jobTitle, phone, country, tierInfo, seats, supportHours, totalAmount } = data
 
     // Get next sequential invoice number
     var invoiceNum = await getNextInvoiceNumber()
@@ -555,6 +566,20 @@ async function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
       yPosition += 45
     }
 
+    if (supportHours > 0) {
+      var supportTotal = supportHours * 300
+
+      doc.fontSize(10)
+         .fillColor('#333333')
+         .text('Addon Technical Support/Coaching', 50, yPosition)
+         .text('($300 per hour)', 50, yPosition + 12, { fontSize: 9, fillColor: '#666666' })
+         .text(supportHours.toString(), 350, yPosition)
+         .text('$300', 420, yPosition)
+         .text(`$${supportTotal.toLocaleString()}`, 490, yPosition, { align: 'right' })
+
+      yPosition += 45
+    }
+
     // Divider before totals
     doc.moveTo(350, yPosition)
        .lineTo(562, yPosition)
@@ -658,32 +683,28 @@ async function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
 
     // Support tier (matches frontend exactly)
     var tierPrice = parseInt(tierInfo.tier)
-    var supportText = ''
+    var supportText = 'Self-serve support library + 24 hour email customer support + office hours'
     var vipPerks = []
 
-    if (tierPrice <= 6000) {
-      supportText = 'Self-serve support library + 24 hour response email'
-    } else if (tierPrice <= 13500) {
-      supportText = 'Self-serve support library + monthly large group office hours + 24 hour response email'
-    } else if (tierPrice <= 21000) {
-      supportText = 'Self-serve support library + weekly small group office hours + 24 hour response email'
-    } else {
-      supportText = '10 hours of 1-on-1 technical support'
+    // VIP tier gets additional perks
+    if (tierPrice === 30000) {
       vipPerks = [
         'Personal concierge available anytime',
+        '10 hours of 1-on-1 technical support',
         'Podcast and in-person speaking opportunities',
         '1 full day of on-site AI training or implementation at your HQ'
       ]
     }
 
+    // Base support text (not bold)
     doc.fontSize(9)
-       .fillColor('#1d2731')
-       .font('Helvetica-Bold')
+       .fillColor('#333333')
+       .font('Helvetica')
        .text('• ' + supportText, 60, includesY, { width: 490 })
 
     includesY += 18
 
-    // VIP perks if applicable
+    // VIP perks if applicable (bolded)
     if (vipPerks.length > 0) {
       doc.font('Helvetica-Bold')
          .fillColor('#1d2731')
@@ -714,7 +735,7 @@ async function generateInvoicePDF (data, status = 'DUE UPON RECEIPT') {
 
 // Side effect: Sends payment confirmation email with PAID invoice PDF
 async function sendPaymentConfirmationEmail (data) {
-  var { name, email, tierInfo, seats, totalAmount, company, phone, jobTitle, country } = data
+  var { name, email, tierInfo, seats, supportHours, totalAmount, company, phone, jobTitle, country } = data
 
   var rawHtml = await readFile("payment-confirmation.html", "utf8")
   var rawTxt = await readFile("payment-confirmation.txt", "utf8")
@@ -786,7 +807,7 @@ async function sendPaymentConfirmationEmail (data) {
 
 // Side effect: Sends invoice request email with PDF attachment
 async function sendInvoiceRequestEmail (data) {
-  var { name, email, tierInfo, seats, totalAmount, company, phone, jobTitle, country } = data
+  var { name, email, tierInfo, seats, supportHours, totalAmount, company, phone, jobTitle, country } = data
 
   var rawHtml = await readFile("invoice-request.html", "utf8")
   var rawTxt = await readFile("invoice-request.txt", "utf8")

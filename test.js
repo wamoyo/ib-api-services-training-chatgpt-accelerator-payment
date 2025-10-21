@@ -13,8 +13,9 @@ var creditCardPayment = {
     payment: {
       applicant: "costa@trollhair.com",
       name: "Costa Michailidis",
-      finalFee: "$13,500",
+      tier: "scholarship",
       additionalSeats: 5,
+      addonSupportHours: 3,
       paymentMethod: "credit-card",
       company: "TrollHair Inc",
       jobTitle: "CTO",
@@ -32,8 +33,9 @@ var invoiceRequest = {
     payment: {
       applicant: "costa@trollhair.com",
       name: "Costa Michailidis",
-      finalFee: "$21,000",
+      tier: "vip",
       additionalSeats: 2,
+      addonSupportHours: 10,
       paymentMethod: "invoice",
       company: "TrollHair Inc",
       jobTitle: "CTO",
@@ -50,8 +52,9 @@ var invalidTier = {
     payment: {
       applicant: "costa@trollhair.com",
       name: "Costa Michailidis",
-      finalFee: "$10,000", // Not a valid tier
+      tier: "invalid", // Not a valid tier
       additionalSeats: 0,
+      addonSupportHours: 0,
       paymentMethod: "invoice",
       company: "TrollHair Inc",
       jobTitle: "CTO",
@@ -68,7 +71,7 @@ var missingField = {
     payment: {
       applicant: "costa@trollhair.com",
       name: "Costa Michailidis",
-      finalFee: "$6,000",
+      tier: "scholarship",
       additionalSeats: 0,
       paymentMethod: "credit-card"
       // Missing company, jobTitle, phone, country
