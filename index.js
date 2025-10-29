@@ -55,6 +55,9 @@ export async function handler (event) {
       paymentMethodId  // For Stripe credit card payments
     } = paymentData
 
+    // Normalize email to lowercase
+    applicant = applicant?.toLowerCase()
+
     // Validate required fields
     console.log(`Processing payment for ${applicant}`)
 
