@@ -52,11 +52,18 @@ export async function handler (event) {
       jobTitle,
       phone,
       country,
-      paymentMethodId  // For Stripe credit card payments
+      paymentMethodId,  // For Stripe credit card payments
+      mobile
     } = paymentData
 
     // Normalize email to lowercase
     applicant = applicant?.toLowerCase()
+
+    // Check for spam (mobile field should be empty)
+    if (mobile && mobile.trim() !== '') {
+      console.log(`Spam detected from ${applicant || 'unknown'} - mobile field filled.`)
+      return respond(200, {message: 'Payment successful! Check your email for enrollment confirmation.'})
+    }
 
     // Validate required fields
     console.log(`Processing payment for ${applicant}`)
